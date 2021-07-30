@@ -14,7 +14,10 @@ provider "aws" {
   region = var.aws_region
 }
 
-resource "random_uuid" "test" {
+resource "random_string" "random" {
+  length           = 16
+  special          = true
+  override_special = "/@£$"
 }
 
 # Create a VPC
@@ -121,7 +124,7 @@ resource "aws_route_table_association" "private_subnet_two_association" {
 
 # Launch Configuration
 resource "aws_launch_configuration" "launch_configuartion" {
-  name                 = "launch_configuration-${var.environment}-${random_uuid.test.result}"
+  name_prefix          = "launch_configuration-${var.environment}-${random_string.random.id}"
   image_id             = data.aws_ami.amazon_ami.id
   instance_type        = var.node_type
   security_groups      = [aws_security_group.instance_security_group.id]
@@ -186,6 +189,12 @@ resource "aws_security_group" "instance_security_group" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  ingress {
+    from_port   = "5000"
+    to_port     = "5000"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
   ingress {
     from_port   = "80"
@@ -211,7 +220,7 @@ resource "aws_security_group" "instance_security_group" {
 }
 
 resource "aws_autoscaling_group" "auto_scaling_group" {
-  name                 = "${var.environment}-auto_scaling_group"
+  name_prefix          = "${aws_launch_configuration.launch_configuartion.name}-${var.environment}-auto_scaling_group"
   launch_configuration = aws_launch_configuration.launch_configuartion.name
   min_size             = 1
   max_size             = 2
